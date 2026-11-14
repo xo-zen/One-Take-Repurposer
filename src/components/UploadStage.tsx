@@ -94,7 +94,7 @@ export function UploadStage({
       {validationError && (
         <div
           role="alert"
-          className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 flex items-start justify-between gap-4"
+          className="bg-red-50 border border-red-200 rounded-xl px-6 py-4 flex items-start justify-between gap-4"
         >
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" aria-hidden="true" />
@@ -114,47 +114,70 @@ export function UploadStage({
       )}
 
       {!videoState.videoUrl ? (
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`bg-white border rounded-xl p-10 md:p-16 min-h-[420px] flex flex-col items-center justify-center text-center transition-colors duration-150 ${
-            isDragging
-              ? 'border-blue-500 bg-blue-50/40'
-              : 'border-slate-200 border-dashed'
-          }`}
-        >
-          <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center mb-5">
-            <Upload className="w-5 h-5" aria-hidden="true" />
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-xl px-6 py-5 space-y-2">
+            <p className="text-sm text-slate-700 leading-relaxed">
+              <span className="font-semibold text-slate-900">What it does:</span>{' '}
+              Turns one long video into vertical shorts, captions in your style,
+              thumbnails, and translations.
+            </p>
+            <p className="text-sm text-slate-700 leading-relaxed">
+              <span className="font-semibold text-slate-900">Who it is for:</span>{' '}
+              Made for video creators who want to publish everywhere without sounding like
+              generic AI.
+            </p>
+            <p className="text-sm text-slate-700 leading-relaxed">
+              <span className="font-semibold text-slate-900">
+                You approve everything:
+              </span>{' '}
+              Edit every title and caption, choose your highlights, and export only what
+              you sign off on.
+            </p>
           </div>
 
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-slate-900 mb-2 text-balance max-w-md">
-            Upload your source video
-          </h1>
-
-          <p className="text-sm text-slate-600 leading-relaxed max-w-md mb-2">
-            Drop a single long-form video here or choose a file from your device. We will
-            extract the audio in your browser and transcribe it into timestamped segments.
-          </p>
-
-          <p className="text-xs text-slate-500 font-mono tabular-nums mb-7">
-            MP4, WebM, or MOV · Up to 5 minutes · Max 20 MB
-          </p>
-
-          <button
-            type="button"
-            onClick={openFilePicker}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 whitespace-nowrap"
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`bg-white border rounded-xl p-10 md:p-16 min-h-[380px] flex flex-col items-center justify-center text-center transition-colors duration-150 ${
+              isDragging
+                ? 'border-blue-500 bg-blue-50/40'
+                : 'border-slate-200 border-dashed'
+            }`}
           >
-            <Film className="w-4 h-4" aria-hidden="true" />
-            Choose Video
-          </button>
+            <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center mb-5">
+              <Upload className="w-5 h-5" aria-hidden="true" />
+            </div>
+
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-slate-900 mb-2 text-balance max-w-md">
+              Upload your source video
+            </h1>
+
+            <p className="text-sm text-slate-600 leading-relaxed max-w-md mb-2">
+              Drop a single long-form video here or choose a file from your device. We will
+              extract the audio in your browser and transcribe it into timestamped
+              segments.
+            </p>
+
+            <p className="text-xs text-slate-500 font-mono tabular-nums mb-7">
+              MP4, WebM, or MOV · Up to 5 minutes · Max 20 MB
+            </p>
+
+            <button
+              type="button"
+              onClick={openFilePicker}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 whitespace-nowrap"
+            >
+              <Film className="w-4 h-4" aria-hidden="true" />
+              Choose Video
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column: Video Preview Player */}
           <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between gap-4">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-4">
               <h2 className="font-display text-base font-semibold text-slate-900 truncate">
                 Source Video
               </h2>
@@ -189,7 +212,7 @@ export function UploadStage({
               />
             </div>
 
-            <div className="px-5 py-4 border-t border-slate-200 space-y-1.5">
+            <div className="px-6 py-4 border-t border-slate-200 space-y-1.5">
               <p className="text-sm font-medium text-slate-900 truncate" title={videoState.fileName}>
                 {videoState.fileName}
               </p>
@@ -217,7 +240,7 @@ export function UploadStage({
 
           {/* Right Column: Timestamped Transcript */}
           <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between gap-4">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-4">
               <div>
                 <h2 className="font-display text-base font-semibold text-slate-900">
                   Transcript
@@ -251,7 +274,7 @@ export function UploadStage({
             </div>
 
             {isBusy && (
-              <div className="p-5 space-y-4" aria-live="polite">
+              <div className="p-6 space-y-4" aria-live="polite">
                 <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg">
                   <Loader2
                     className="w-4 h-4 text-blue-600 animate-spin shrink-0"
@@ -332,7 +355,7 @@ export function UploadStage({
                           <button
                             type="button"
                             onClick={() => handleSeekToSegment(segment.start)}
-                            className={`w-full text-left px-5 py-3.5 flex items-baseline gap-4 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-blue-600 ${
+                            className={`w-full text-left px-6 py-3.5 flex items-baseline gap-4 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-blue-600 ${
                               isActive
                                 ? 'bg-blue-50/70'
                                 : 'hover:bg-slate-50'

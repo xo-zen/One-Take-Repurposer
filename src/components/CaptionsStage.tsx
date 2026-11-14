@@ -19,6 +19,12 @@ import type {
 import { LANGUAGE_OPTIONS, getLanguageLabel } from '../utils/captionLanguage';
 import { formatTimestamp } from '../utils/formatTime';
 
+const DEMO_VOICE_SAMPLES = [
+  'Stop over-editing your first 5 seconds. Nobody cares about your logo intro—tell them what actually changes if they watch till the end 🎯',
+  'Tested this one-take workflow for 30 days straight. Zero fancy transitions, way clearer ideas, and double the average watch time. Ship fast, refine later.',
+  'Hot take: most "viral hooks" fail because they sound like a template instead of a real person talking. Write how you speak—short sentences and zero fluff 👇',
+].join('\n\n');
+
 interface CaptionsStageProps {
   videoState: UploadedVideoState;
   onVoiceSamplesChange: (value: string) => void;
@@ -62,6 +68,11 @@ export function CaptionsStage({
   const isTranslating = videoState.translationStatus === 'loading';
   const activeLanguage = videoState.selectedLanguage;
   const activeLanguageLabel = getLanguageLabel(activeLanguage);
+
+  const handleLoadDemo = () => {
+    setSampleValidationError(null);
+    onVoiceSamplesChange(DEMO_VOICE_SAMPLES);
+  };
 
   const handleGenerateClick = () => {
     if (!videoState.voiceSamples.trim()) {
@@ -134,7 +145,7 @@ export function CaptionsStage({
     <div className="space-y-6">
       {/* Voice Samples Input */}
       <section className="bg-white border border-slate-200 rounded-xl p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
           <div>
             <label
               htmlFor="voice-samples-input"
@@ -148,6 +159,15 @@ export function CaptionsStage({
               {videoState.highlights.length === 1 ? 'highlight' : 'highlights'}.
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={handleLoadDemo}
+            disabled={isBusy}
+            className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 self-start sm:self-auto"
+          >
+            Load demo
+          </button>
         </div>
 
         <textarea
@@ -199,8 +219,8 @@ export function CaptionsStage({
 
       {/* Loading Skeleton */}
       {isBusy && (
-        <div className="space-y-4" aria-live="polite">
-          <div className="bg-white border border-slate-200 rounded-xl px-5 py-4 flex items-center gap-3">
+        <div className="space-y-6" aria-live="polite">
+          <div className="bg-white border border-slate-200 rounded-xl px-6 py-4 flex items-center gap-3">
             <Loader2
               className="w-4 h-4 text-blue-600 animate-spin shrink-0"
               aria-hidden="true"
@@ -240,7 +260,7 @@ export function CaptionsStage({
       {videoState.captionsStatus === 'error' && (
         <div
           role="alert"
-          className="bg-red-50 border border-red-200 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          className="bg-red-50 border border-red-200 rounded-xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
           <div className="flex items-start gap-3">
             <AlertCircle
@@ -284,7 +304,7 @@ export function CaptionsStage({
         return (
           <div className="space-y-6">
             {/* Language Selector + Review & Edit Summary Bar */}
-            <div className="bg-white border border-slate-200 rounded-xl px-5 py-4 space-y-3.5">
+            <div className="bg-white border border-slate-200 rounded-xl px-6 py-4 space-y-3.5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700">
@@ -390,7 +410,7 @@ export function CaptionsStage({
             {activeLanguage !== 'en' && isTranslating && (
               <div
                 aria-live="polite"
-                className="bg-white border border-slate-200 rounded-xl px-5 py-4 flex items-center gap-3"
+                className="bg-white border border-slate-200 rounded-xl px-6 py-4 flex items-center gap-3"
               >
                 <Loader2
                   className="w-4 h-4 text-blue-600 animate-spin shrink-0"
@@ -407,7 +427,7 @@ export function CaptionsStage({
             {activeLanguage !== 'en' && videoState.translationStatus === 'error' && (
               <div
                 role="alert"
-                className="bg-red-50 border border-red-200 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="bg-red-50 border border-red-200 rounded-xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div className="flex items-start gap-3">
                   <AlertCircle

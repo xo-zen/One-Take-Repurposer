@@ -147,7 +147,7 @@ export function HighlightsStage({
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       {/* Left Column: Video Preview Player */}
       <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl overflow-hidden lg:sticky lg:top-6">
-        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between gap-4">
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-4">
           <h2 className="font-display text-base font-semibold text-slate-900 truncate">
             Preview Player
           </h2>
@@ -177,7 +177,7 @@ export function HighlightsStage({
           />
         </div>
 
-        <div className="px-5 py-4 border-t border-slate-200 space-y-1">
+        <div className="px-6 py-4 border-t border-slate-200 space-y-1">
           <p className="text-sm font-medium text-slate-900 truncate" title={videoState.fileName}>
             {videoState.fileName}
           </p>
@@ -191,8 +191,8 @@ export function HighlightsStage({
       </div>
 
       {/* Right Column: Highlights List */}
-      <div className="lg:col-span-7 space-y-4">
-        <div className="bg-white border border-slate-200 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
+      <div className="lg:col-span-7 space-y-6">
+        <div className="bg-white border border-slate-200 rounded-xl px-6 py-4 flex items-center justify-between gap-4">
           <div>
             <h1 className="font-display text-base font-semibold text-slate-900">
               Short-Form Highlights
@@ -226,8 +226,8 @@ export function HighlightsStage({
         </div>
 
         {isBusy && (
-          <div className="space-y-4" aria-live="polite">
-            <div className="bg-white border border-slate-200 rounded-xl px-5 py-4 flex items-center gap-3">
+          <div className="space-y-6" aria-live="polite">
+            <div className="bg-white border border-slate-200 rounded-xl px-6 py-4 flex items-center gap-3">
               <Loader2
                 className="w-4 h-4 text-blue-600 animate-spin shrink-0"
                 aria-hidden="true"
@@ -240,7 +240,7 @@ export function HighlightsStage({
             {[1, 2, 3].map((card) => (
               <div
                 key={card}
-                className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 animate-pulse"
+                className="bg-white border border-slate-200 rounded-xl p-6 space-y-3 animate-pulse"
               >
                 <div className="flex items-center justify-between">
                   <div className="h-4 w-48 bg-slate-200 rounded" />
@@ -261,7 +261,7 @@ export function HighlightsStage({
         {videoState.highlightsStatus === 'error' && (
           <div
             role="alert"
-            className="bg-red-50 border border-red-200 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            className="bg-red-50 border border-red-200 rounded-xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
           >
             <div className="flex items-start gap-3">
               <AlertCircle
@@ -329,7 +329,7 @@ export function HighlightsStage({
             return (
               <article
                 key={highlight.id}
-                className={`bg-white border rounded-xl p-5 transition-colors ${
+                className={`bg-white border rounded-xl p-6 transition-colors ${
                   activeHighlightId === highlight.id
                     ? 'border-blue-400'
                     : 'border-slate-200'

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import {
+  Check,
   Upload,
   Sparkles,
   Captions,
   Scissors,
   Download,
-  ChevronRight,
   type LucideIcon,
 } from 'lucide-react';
 import { CaptionsStage } from './components/CaptionsStage';
@@ -38,6 +38,16 @@ import {
   renderThumbnailWithStyle,
 } from './utils/generateThumbnail';
 import { renderVerticalClipWithSubtitles } from './utils/renderClip';
+import {
+  clearCachedClips,
+  clearCachedWorkspace,
+  deleteCachedClipBlob,
+  loadCachedWorkspace,
+  loadTranscriptCacheForFile,
+  saveCachedClipBlob,
+  saveCachedWorkspace,
+  saveTranscriptCache,
+} from './utils/workspaceCache';
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
 const MAX_DURATION_SECONDS = 300; // 5 minutes
@@ -153,6 +163,8 @@ function RepurposerShell() {
     sizeBytes: number;
   } | null>(null);
 
+  const [isCacheHydrated, setIsCacheHydrated] = useState(false);
+
   const activeRequestRef = useRef<AbortController | null>(null);
   const highlightsRequestRef = useRef<AbortController | null>(null);
   const captionsRequestRef = useRef<AbortController | null>(null);
@@ -160,6 +172,7 @@ function RepurposerShell() {
   const videoUrlRef = useRef<string | null>(null);
   const clipsRef = useRef<Record<string, RenderedClipItem>>({});
   const thumbnailsRef = useRef<Record<string, ThumbnailItem>>({});
+  const skipHydrationRef = useRef(false);
 
   useEffect(() => {
     videoUrlRef.current = videoState.videoUrl;
@@ -172,6 +185,50 @@ function RepurposerShell() {
   useEffect(() => {
     thumbnailsRef.current = videoState.thumbnails;
   }, [videoState.thumbnails]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const restored = await loadCachedWorkspace();
+      if (cancelled) {
+        if (restored?.videoState.videoUrl) {
+          URL.revokeObjectURL(restored.videoState.videoUrl);
+        }
+        if (restored?.videoState.clips) {
+          revokeAllClipUrls(restored.videoState.clips);
+        }
+        return;
+      }
+
+      if (restored && !skipHydrationRef.current) {
+        setActiveStepId(restored.activeStepId);
+        setVideoState(restored.videoState);
+      } else if (restored) {
+        if (restored.videoState.videoUrl) {
+          URL.revokeObjectURL(restored.videoState.videoUrl);
+        }
+        revokeAllClipUrls(restored.videoState.clips);
+      }
+      setIsCacheHydrated(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isCacheHydrated) return;
+    if (!videoState.file && videoState.transcript.length === 0) return;
+
+    const timer = window.setTimeout(() => {
+      void saveCachedWorkspace(activeStepId, videoState);
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isCacheHydrated, activeStepId, videoState]);
 
   useEffect(() => {
     return () => {
@@ -188,6 +245,8 @@ function RepurposerShell() {
   }, []);
 
   const runTranscription = async (file: File, knownDurationSeconds: number) => {
+    skipHydrationRef.current = true;
+    void clearCachedClips();
     activeRequestRef.current?.abort();
     highlightsRequestRef.current?.abort();
     captionsRequestRef.current?.abort();
@@ -251,12 +310,21 @@ function RepurposerShell() {
 
       if (controller.signal.aborted) return;
 
+      const segments = Array.isArray(data.segments) ? data.segments : [];
+      const resolvedDuration = payload.durationSeconds || knownDurationSeconds || null;
+
       setVideoState((prev) => ({
         ...prev,
-        transcript: Array.isArray(data.segments) ? data.segments : [],
+        transcript: segments,
         transcriptionStatus: 'success',
         transcriptionError: null,
       }));
+
+      void saveTranscriptCache(file, {
+        durationSeconds: resolvedDuration,
+        extractionMode: payload.mode,
+        transcript: segments,
+      });
     } catch (err) {
       if (controller.signal.aborted) return;
 
@@ -275,6 +343,7 @@ function RepurposerShell() {
   };
 
   const handleSelectVideo = async (file: File) => {
+    skipHydrationRef.current = true;
     setValidationError(null);
 
     if (!file.type.startsWith('video/')) {
@@ -321,6 +390,43 @@ function RepurposerShell() {
     }
 
     const nextVideoUrl = URL.createObjectURL(file);
+    const cachedTranscript = await loadTranscriptCacheForFile(file);
+
+    revokeAllClipUrls(clipsRef.current);
+    revokeAllThumbnailUrls(thumbnailsRef.current);
+    void clearCachedClips();
+    setExportError(null);
+    setLastExportSummary(null);
+
+    if (cachedTranscript && cachedTranscript.transcript.length > 0) {
+      setVideoState({
+        file,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type || 'video/mp4',
+        videoUrl: nextVideoUrl,
+        durationSeconds:
+          cachedTranscript.durationSeconds ??
+          (durationSeconds > 0 ? durationSeconds : null),
+        extractionMode: cachedTranscript.extractionMode,
+        transcript: cachedTranscript.transcript,
+        transcriptionStatus: 'success',
+        transcriptionError: null,
+        highlights: [],
+        highlightsStatus: 'idle',
+        highlightsError: null,
+        voiceSamples: videoState.voiceSamples,
+        captions: [],
+        captionsStatus: 'idle',
+        captionsError: null,
+        selectedLanguage: 'en',
+        translationStatus: 'idle',
+        translationError: null,
+        clips: {},
+        thumbnails: {},
+      });
+      return;
+    }
 
     setVideoState({
       file,
@@ -347,10 +453,6 @@ function RepurposerShell() {
       thumbnails: {},
     });
 
-    revokeAllClipUrls(clipsRef.current);
-    revokeAllThumbnailUrls(thumbnailsRef.current);
-    setExportError(null);
-    setLastExportSummary(null);
     void runTranscription(file, durationSeconds);
   };
 
@@ -360,6 +462,7 @@ function RepurposerShell() {
   };
 
   const handleClearVideo = () => {
+    skipHydrationRef.current = true;
     activeRequestRef.current?.abort();
     highlightsRequestRef.current?.abort();
     captionsRequestRef.current?.abort();
@@ -373,6 +476,7 @@ function RepurposerShell() {
     setExportError(null);
     setLastExportSummary(null);
     setVideoState(INITIAL_VIDEO_STATE);
+    void clearCachedWorkspace();
   };
 
   const runFindHighlights = async (
@@ -389,6 +493,7 @@ function RepurposerShell() {
 
     revokeAllClipUrls(clipsRef.current);
     revokeAllThumbnailUrls(thumbnailsRef.current);
+    void clearCachedClips();
 
     setVideoState((prev) => ({
       ...prev,
@@ -459,6 +564,7 @@ function RepurposerShell() {
     if (existingThumb?.thumbnailUrl) {
       URL.revokeObjectURL(existingThumb.thumbnailUrl);
     }
+    void deleteCachedClipBlob(id);
 
     setVideoState((prev) => {
       const nextClips = { ...prev.clips };
@@ -494,6 +600,7 @@ function RepurposerShell() {
 
     revokeAllClipUrls(clipsRef.current);
     revokeAllThumbnailUrls(thumbnailsRef.current);
+    void clearCachedClips();
 
     setVideoState((prev) => ({
       ...prev,
@@ -887,6 +994,11 @@ function RepurposerShell() {
           [captionItem.highlightId]: readyClip,
         },
       }));
+      void saveCachedClipBlob(
+        captionItem.highlightId,
+        result.clipUrl,
+        result.sizeBytes
+      );
       return readyClip;
     } catch (err) {
       const errorMessage =
@@ -1279,78 +1391,136 @@ function RepurposerShell() {
     }
   };
 
+  const activeIndex = Math.max(
+    0,
+    WORKFLOW_STEPS.findIndex((step) => step.id === activeStepId)
+  );
+  const activeStep = WORKFLOW_STEPS[activeIndex] ?? WORKFLOW_STEPS[0];
+  const approvedCaptions = videoState.captions.filter(
+    (item) => item.reviewStatus === 'approved'
+  );
+  const completedSteps: Record<WorkflowStepId, boolean> = {
+    upload:
+      videoState.transcriptionStatus === 'success' &&
+      videoState.transcript.length > 0,
+    highlights: videoState.highlights.length > 0,
+    captions: approvedCaptions.length > 0,
+    clips:
+      approvedCaptions.length > 0 &&
+      approvedCaptions.every(
+        (item) => videoState.clips[item.highlightId]?.status === 'ready'
+      ),
+    export: Boolean(lastExportSummary),
+  };
+  const progressPercent = ((activeIndex + 1) / WORKFLOW_STEPS.length) * 100;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-slate-900">
       {/* Top Bar */}
       <header className="bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-8">
-          <a
-            href="#top"
-            onClick={(e) => {
-              e.preventDefault();
-              setActiveStepId('upload');
-            }}
-            className="font-display text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 rounded"
-          >
-            One-Take Repurposer
-          </a>
+        <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <a
+              href="#top"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveStepId('upload');
+              }}
+              className="font-display text-xl font-bold tracking-tight text-slate-900 inline-block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 rounded"
+            >
+              One-Take Repurposer
+            </a>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Turn one long video into shorts, captions, thumbnails, and translations in
+              your voice.
+            </p>
+          </div>
+
+          <p className="font-mono text-xs tabular-nums text-slate-500 whitespace-nowrap shrink-0">
+            Step {activeStep.number} of 0{WORKFLOW_STEPS.length} · {activeStep.label}
+          </p>
         </div>
       </header>
 
-      {/* Left-to-Right Workflow Tabs */}
+      {/* Left-to-Right Step Progress Bar & Workflow Tabs */}
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-6">
+        <div className="max-w-6xl mx-auto px-6 pt-3 pb-3.5 space-y-2.5">
           <nav
             aria-label="Repurposing workflow steps"
             role="tablist"
-            className="flex items-center gap-1 overflow-x-auto py-3"
+            className="flex md:grid md:grid-cols-5 items-stretch gap-2 overflow-x-auto"
           >
             {WORKFLOW_STEPS.map((step, index) => {
               const StepIcon = step.icon;
               const isActive = step.id === activeStepId;
+              const isDone = completedSteps[step.id];
 
               return (
-                <div key={step.id} className="flex items-center shrink-0">
-                  <button
-                    type="button"
-                    role="tab"
-                    id={`tab-${step.id}`}
-                    aria-selected={isActive}
-                    aria-controls={`panel-${step.id}`}
-                    onClick={() => setActiveStepId(step.id)}
-                    onKeyDown={(e) => handleTabKeyDown(e, index)}
-                    className={`inline-flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
-                      isActive
-                        ? 'bg-slate-900 text-white'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                  >
+                <button
+                  key={step.id}
+                  type="button"
+                  role="tab"
+                  id={`tab-${step.id}`}
+                  aria-selected={isActive}
+                  aria-controls={`panel-${step.id}`}
+                  onClick={() => setActiveStepId(step.id)}
+                  onKeyDown={(e) => handleTabKeyDown(e, index)}
+                  className={`flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
+                    isActive
+                      ? 'bg-slate-900 text-white'
+                      : isDone
+                      ? 'bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-2 min-w-0">
                     <span
                       className={`font-mono text-xs tabular-nums ${
-                        isActive ? 'text-slate-300' : 'text-slate-400'
+                        isActive
+                          ? 'text-slate-300'
+                          : isDone
+                          ? 'text-emerald-700 font-semibold'
+                          : 'text-slate-400'
                       }`}
                     >
                       {step.number}
                     </span>
                     <StepIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
-                    <span>{step.label}</span>
-                  </button>
+                    <span className="truncate">{step.label}</span>
+                  </span>
 
-                  {index < WORKFLOW_STEPS.length - 1 && (
-                    <ChevronRight
-                      className="w-4 h-4 text-slate-300 mx-1.5 shrink-0"
-                      aria-hidden="true"
+                  {isDone && (
+                    <Check
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        isActive ? 'text-emerald-400' : 'text-emerald-600'
+                      }`}
+                      aria-label="Completed"
                     />
                   )}
-                </div>
+                </button>
               );
             })}
           </nav>
+
+          {/* Continuous Step Progress Bar */}
+          <div
+            role="progressbar"
+            aria-label="Workflow step progress"
+            aria-valuemin={1}
+            aria-valuemax={WORKFLOW_STEPS.length}
+            aria-valuenow={activeIndex + 1}
+            className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden"
+          >
+            <div
+              className="h-full bg-slate-900 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
         </div>
       </div>
 
       {/* Stage Workspace */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-10">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8">
         {activeStepId === 'upload' ? (
           <section
             role="tabpanel"
