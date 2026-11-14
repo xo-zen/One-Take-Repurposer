@@ -1,0 +1,6 @@
+{
+  "name": "One-Take Repurposer",
+  "description": "Turn one long video into shorts, captions, thumbnails, and translations with human-approved AI repurposing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
