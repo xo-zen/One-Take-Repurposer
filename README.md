@@ -1,6 +1,6 @@
 # One-Take Repurposer
 
-**Built for Genarrative Clash** — *Where Gen AI Meets Human Creativity*
+**Built ** — *Where Gen AI Meets Human Creativity*
 
 One-Take Repurposer helps content creators turn **one** long-form video into ready-to-publish short-form assets—vertical `9:16` clips with burned-in subtitles, voice-matched captions, styled thumbnails, and multilingual translations—while keeping the **human creator as the final author**. Nothing is exported without the creator's explicit approval.
 
